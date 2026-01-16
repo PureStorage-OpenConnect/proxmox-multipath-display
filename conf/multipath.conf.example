@@ -1,0 +1,79 @@
+# Example multipath.conf for Proxmox VE
+# This configuration works with the Multipath Display Plugin
+# Copy to /etc/multipath.conf and adjust for your environment
+
+defaults {
+    user_friendly_names yes
+    find_multipaths yes
+    polling_interval 5
+    path_selector "round-robin 0"
+    path_grouping_policy failover
+    failback immediate
+    no_path_retry queue
+}
+
+# Blacklist local devices
+blacklist {
+    devnode "^(ram|raw|loop|fd|md|dm-|sr|scd|st)[0-9]*"
+    devnode "^hd[a-z]"
+    devnode "^nvme[0-9]n[0-9]$"
+}
+
+# Device-specific settings
+devices {
+    # Pure Storage FlashArray
+    device {
+        vendor "PURE"
+        product "FlashArray"
+        path_selector "round-robin 0"
+        path_grouping_policy group_by_prio
+        prio alua
+        failback immediate
+        no_path_retry queue
+        fast_io_fail_tmo 10
+        dev_loss_tmo 60
+    }
+
+    # Dell EMC PowerStore
+    device {
+        vendor "DellEMC"
+        product "PowerStore"
+        path_selector "round-robin 0"
+        path_grouping_policy group_by_prio
+        prio alua
+        failback immediate
+        no_path_retry queue
+    }
+
+    # NetApp ONTAP
+    device {
+        vendor "NETAPP"
+        product "LUN"
+        path_selector "round-robin 0"
+        path_grouping_policy group_by_prio
+        prio ontap
+        failback immediate
+        no_path_retry queue
+    }
+
+    # Generic iSCSI target
+    device {
+        vendor "IET"
+        product "VIRTUAL-DISK"
+        path_selector "round-robin 0"
+        path_grouping_policy failover
+        failback immediate
+        no_path_retry queue
+    }
+
+    # TrueNAS / FreeNAS
+    device {
+        vendor "TrueNAS"
+        product "iSCSI Disk"
+        path_selector "round-robin 0"
+        path_grouping_policy failover
+        failback immediate
+        no_path_retry queue
+    }
+}
+
