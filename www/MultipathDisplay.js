@@ -25,6 +25,75 @@ function getTransportInfo(transport) {
 
 // Hook into the storage Summary panel to add multipath status
 (function() {
+    function ensureMultipathStyles() {
+        if (Ext.get('pve-multipath-styles')) return;
+
+        Ext.DomHelper.append(Ext.getHead(), {
+            tag: 'style',
+            id: 'pve-multipath-styles',
+            html: [
+                '.pve-mpath {',
+                '  --pve-mpath-surface: var(--pwt-panel-background, #f8f8f8);',
+                '  --pve-mpath-border: var(--pwt-chart-grid-stroke, #e0e0e0);',
+                '  --pve-mpath-header-bg: var(--pwt-gauge-back, #e8e8e8);',
+                '  --pve-mpath-summary-bg: var(--pwt-gauge-back, #f0f0f0);',
+                '  --pve-mpath-muted: var(--pwt-text-color, #666);',
+                '  --pve-mpath-accent: var(--pwt-chart-primary, #337ab7);',
+                '  --pve-mpath-code-bg: #2d2d2d;',
+                '  --pve-mpath-code-fg: #f8f8f2;',
+                '}',
+                '.pve-mpath .pve-mpath-device {',
+                '  margin-bottom: 15px;',
+                '  padding: 10px;',
+                '  background: var(--pve-mpath-surface);',
+                '  border: 1px solid var(--pve-mpath-border);',
+                '  border-radius: 4px;',
+                '}',
+                '.pve-mpath .pve-mpath-muted {',
+                '  color: var(--pve-mpath-muted);',
+                '}',
+                '.pve-mpath .pve-mpath-accent {',
+                '  color: var(--pve-mpath-accent);',
+                '}',
+                '.pve-mpath .pve-mpath-summary {',
+                '  margin-top: 10px;',
+                '  padding: 8px;',
+                '  background: var(--pve-mpath-summary-bg);',
+                '  border-radius: 4px;',
+                '}',
+                '.pve-mpath .pve-mpath-empty {',
+                '  margin-top: 15px;',
+                '  padding: 10px;',
+                '  background: var(--pve-mpath-surface);',
+                '  border: 1px solid var(--pve-mpath-border);',
+                '  border-radius: 3px;',
+                '}',
+                '.pve-mpath .pve-mpath-command {',
+                '  display: block;',
+                '  margin-top: 8px;',
+                '  padding: 8px;',
+                '  background: var(--pve-mpath-code-bg);',
+                '  color: var(--pve-mpath-code-fg);',
+                '  border-radius: 3px;',
+                '}',
+                '.pve-mpath .pve-mpath-table {',
+                '  width: 100%;',
+                '  border-collapse: collapse;',
+                '  margin-top: 8px;',
+                '}',
+                '.pve-mpath .pve-mpath-table th,',
+                '.pve-mpath .pve-mpath-table td {',
+                '  padding: 6px;',
+                '  border: 1px solid var(--pve-mpath-border);',
+                '  text-align: left;',
+                '}',
+                '.pve-mpath .pve-mpath-table thead tr {',
+                '  background: var(--pve-mpath-header-bg);',
+                '}',
+            ].join('\n'),
+        });
+    }
+
     // Store the original initComponent
     let originalInit = PVE.storage.Summary.prototype.initComponent;
 
@@ -64,6 +133,8 @@ function getTransportInfo(transport) {
 
     PVE.storage.Summary.prototype.addMultipathStatusPanel = function(storageConfig, storeid, nodename) {
         let me = this;
+
+        ensureMultipathStyles();
 
         // Do not add if already exists
         if (me.down('#multipathStatus')) return;
@@ -124,7 +195,7 @@ function getTransportInfo(transport) {
     };
 
     PVE.storage.Summary.prototype.renderMultipathStatus = function(panel, storageConfig, statusData, pathData) {
-        let html = '<table class="pve-infotable" style="width: 100%;">';
+        let html = '<div class="pve-mpath"><table class="pve-infotable" style="width: 100%;">';
 
         // Determine storage type display
         let hasMultipath = statusData.multipathStatus &&
@@ -195,7 +266,7 @@ function getTransportInfo(transport) {
                 }
             });
 
-            html += '<div style="margin-top: 10px; padding: 8px; background: #f0f0f0; border-radius: 4px;">';
+            html += '<div class="pve-mpath-summary">';
             if (activePaths === totalPaths) {
                 html += '<span style="color: #5cb85c;"><i class="fa fa-check-circle"></i> ' +
                         activePaths + '/' + totalPaths + ' ' + gettext('paths active') + '</span>';
@@ -206,18 +277,19 @@ function getTransportInfo(transport) {
             html += '</div>';
             html += '</div>';
         } else {
-            html += '<div style="margin-top: 15px; padding: 10px; background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 3px;">';
-            html += '<div style="color: #999;"><i class="fa fa-info-circle"></i> ' +
+            html += '<div class="pve-mpath-empty">';
+            html += '<div class="pve-mpath-muted"><i class="fa fa-info-circle"></i> ' +
                     gettext('Path details not available. Run on the node:') + '</div>';
-            html += '<code style="display: block; margin-top: 8px; padding: 8px; background: #2d2d2d; color: #f8f8f2; border-radius: 3px;">multipath -ll</code>';
+            html += '<code class="pve-mpath-command">multipath -ll</code>';
             html += '</div>';
         }
 
+        html += '</div>';
         panel.update(html);
     };
 
     PVE.storage.Summary.prototype.renderMultipathDevice = function(device, storageType) {
-        let html = '<div style="margin-bottom: 15px; padding: 10px; background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 4px;">';
+        let html = '<div class="pve-mpath-device">';
 
         // Detect NVMe native multipath based on storage type or device properties
         // LVM on NVMe will have nqn/subsystem set, or paths starting with 'nvme'
@@ -246,15 +318,15 @@ function getTransportInfo(transport) {
             html += '<i class="fa fa-hdd-o"></i> /dev/mapper/' + Ext.htmlEncode(device.name);
         }
         if (device.size) {
-            html += ' <span style="color: #666; font-weight: normal;">(' + Ext.htmlEncode(device.size) + ')</span>';
+            html += ' <span class="pve-mpath-muted" style="font-weight: normal;">(' + Ext.htmlEncode(device.size) + ')</span>';
         }
         if (device.pv_path) {
-            html += ' <span style="color: #337ab7; font-weight: normal;">&rarr; PV: ' + Ext.htmlEncode(device.pv_path) + '</span>';
+            html += ' <span class="pve-mpath-accent" style="font-weight: normal;">&rarr; PV: ' + Ext.htmlEncode(device.pv_path) + '</span>';
         }
         html += '</div>';
 
         // Device details - different for NVMe vs SCSI
-        html += '<div style="font-size: 0.9em; color: #666; margin-bottom: 8px;">';
+        html += '<div class="pve-mpath-muted" style="font-size: 0.9em; margin-bottom: 8px;">';
         if (isNvmeNative) {
             html += 'NQN: ' + Ext.htmlEncode(device.nqn || device.wwid || 'unknown');
             if (device.subsystem) {
@@ -274,18 +346,18 @@ function getTransportInfo(transport) {
 
         // Path table - adjust columns based on multipath type
         if (device.paths && device.paths.length > 0) {
-            html += '<table style="width: 100%; border-collapse: collapse; margin-top: 8px;">';
-            html += '<thead><tr style="background: #e8e8e8;">';
-            html += '<th style="padding: 6px; border: 1px solid #ddd; text-align: left;">' + gettext('Device') + '</th>';
+            html += '<table class="pve-mpath-table">';
+            html += '<thead><tr>';
+            html += '<th>' + gettext('Device') + '</th>';
             if (isNvmeNative) {
-                html += '<th style="padding: 6px; border: 1px solid #ddd; text-align: left;">' + gettext('Controller') + '</th>';
+                html += '<th>' + gettext('Controller') + '</th>';
             } else {
-                html += '<th style="padding: 6px; border: 1px solid #ddd; text-align: left;">HCTL</th>';
+                html += '<th>HCTL</th>';
             }
-            html += '<th style="padding: 6px; border: 1px solid #ddd; text-align: left;">' + gettext('Transport') + '</th>';
-            html += '<th style="padding: 6px; border: 1px solid #ddd; text-align: left;">' + gettext('Portal/Address') + '</th>';
-            html += '<th style="padding: 6px; border: 1px solid #ddd; text-align: left;">' + gettext('Interface') + '</th>';
-            html += '<th style="padding: 6px; border: 1px solid #ddd; text-align: left;">' + gettext('State') + '</th>';
+            html += '<th>' + gettext('Transport') + '</th>';
+            html += '<th>' + gettext('Portal/Address') + '</th>';
+            html += '<th>' + gettext('Interface') + '</th>';
+            html += '<th>' + gettext('State') + '</th>';
             html += '</tr></thead><tbody>';
 
             device.paths.forEach(function(path) {
@@ -301,19 +373,19 @@ function getTransportInfo(transport) {
                 let transportInfo = getTransportInfo(path.transport || 'unknown');
 
                 html += '<tr>';
-                html += '<td style="padding: 6px; border: 1px solid #ddd;"><code>/dev/' + Ext.htmlEncode(path.device) + '</code></td>';
+                html += '<td><code>/dev/' + Ext.htmlEncode(path.device) + '</code></td>';
                 if (isNvmeNative) {
                     // Show controller name for NVMe (e.g., nvme0, nvme1)
-                    html += '<td style="padding: 6px; border: 1px solid #ddd;">' + Ext.htmlEncode(path.controller || '-') + '</td>';
+                    html += '<td>' + Ext.htmlEncode(path.controller || '-') + '</td>';
                 } else {
-                    html += '<td style="padding: 6px; border: 1px solid #ddd;">' + Ext.htmlEncode(path.hctl || '-') + '</td>';
+                    html += '<td>' + Ext.htmlEncode(path.hctl || '-') + '</td>';
                 }
-                html += '<td style="padding: 6px; border: 1px solid #ddd; color: ' + transportInfo.color + ';">';
+                html += '<td style="color: ' + transportInfo.color + ';">';
                 html += '<i class="fa ' + transportInfo.icon + '"></i> ' + transportInfo.label;
                 html += '</td>';
-                html += '<td style="padding: 6px; border: 1px solid #ddd;">' + Ext.htmlEncode(path.portal || '-') + '</td>';
-                html += '<td style="padding: 6px; border: 1px solid #ddd;">' + Ext.htmlEncode(path.hostIface || '-') + '</td>';
-                html += '<td style="padding: 6px; border: 1px solid #ddd; color: ' + stateColor + ';">';
+                html += '<td>' + Ext.htmlEncode(path.portal || '-') + '</td>';
+                html += '<td>' + Ext.htmlEncode(path.hostIface || '-') + '</td>';
+                html += '<td style="color: ' + stateColor + ';">';
                 html += '<i class="fa ' + stateIcon + '"></i> ' + Ext.htmlEncode(path.state);
                 html += '</td>';
                 html += '</tr>';
